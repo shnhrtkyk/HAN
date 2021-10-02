@@ -30,6 +30,8 @@ class SRData(data.Dataset):
             os.makedirs(path_bin, exist_ok=True)
 
         list_hr, list_lr = self._scan()
+        print(list_hr)
+        print(list_lr)
         if args.ext.find('img') >= 0 or benchmark:
             self.images_hr, self.images_lr = list_hr, list_lr
         elif args.ext.find('sep') >= 0:
@@ -60,6 +62,7 @@ class SRData(data.Dataset):
                     self.images_lr[i].append(b)
                     self._check_and_load(args.ext, l, b, verbose=True) 
         if train:
+            self.images_hr, self.images_lr = list_hr, list_lr
             n_patches = args.batch_size * args.test_every
             n_images = len(args.data_train) * len(self.images_hr)
             if n_images == 0:
@@ -69,16 +72,20 @@ class SRData(data.Dataset):
 
     # Below functions as used to prepare images
     def _scan(self):
+        print(self.dir_hr)
+        print(self.ext[0])
         names_hr = sorted(
             glob.glob(os.path.join(self.dir_hr, '*' + self.ext[0]))
         )
+        print(names_hr)
         names_lr = [[] for _ in self.scale]
         for f in names_hr:
-            filename,_ = os.path.splitext(os.path.basename(f))[0].split('_')
+            print(os.path.splitext(os.path.basename(f))[0])
+            filename = os.path.splitext(os.path.basename(f))[0].replace("_high","")
             for si, s in enumerate(self.scale):
                 names_lr[si].append(os.path.join(
-                    self.dir_lr, 'X{}/{}{}{}'.format(
-                        s, filename, '_LR', self.ext[1]
+                    self.dir_lr, '{}{}{}'.format(
+                        filename, '_low', self.ext[1]
                     )
                 ))
 
@@ -89,7 +96,7 @@ class SRData(data.Dataset):
         self.dir_hr = os.path.join(self.apath, 'HR')
         self.dir_lr = os.path.join(self.apath, 'LR_bicubic')
         if self.input_large: self.dir_lr += 'L'
-        self.ext = ('.png', '.png')
+        self.ext = ('.tif', '.tif')
 
     def _check_and_load(self, ext, img, f, verbose=True):
         if not os.path.isfile(f) or ext.find('reset') >= 0:
@@ -126,6 +133,9 @@ class SRData(data.Dataset):
         #pdb.set_trace()
 
         filename, _ = os.path.splitext(os.path.basename(f_hr))
+        print(filename)
+        print(f_hr)
+        print(f_lr)
         if self.args.ext == 'img' or self.benchmark:
             hr = imageio.imread(f_hr)
             lr = imageio.imread(f_lr)
@@ -134,7 +144,8 @@ class SRData(data.Dataset):
                 hr = pickle.load(_f)
             with open(f_lr, 'rb') as _f:
                 lr = pickle.load(_f)
-
+        hr = imageio.imread(f_hr)
+        lr = imageio.imread(f_lr)
         return lr, hr, filename
 
     def get_patch(self, lr, hr):
